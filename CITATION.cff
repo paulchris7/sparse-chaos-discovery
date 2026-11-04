@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite the paper."
+title: "Learning and Discovering Chaotic Dynamics from Sparse, Noisy Observations"
+authors:
+  - family-names: "Aimé"
+    given-names: "Paul Christopher"
+    orcid: "https://orcid.org/0009-0008-5574-1734"
+    affiliation: "ENSA Marrakech, Cadi Ayyad University"
+license: MIT
+repository-code: "https://github.com/paulchris7/sparse-chaos-discovery"
+preferred-citation:
+  type: article
+  title: "Learning and Discovering Chaotic Dynamics from Sparse, Noisy Observations"
+  authors:
+    - family-names: "Aimé"
+      given-names: "Paul Christopher"
+  year: 2026
+  doi: "10.5281/zenodo.23464920"
+  publisher:
+    name: "Zenodo"

@@ -1,0 +1,14 @@
+\chapter{Conclusion}\label{ch:conclusion}
+
+This report compared classical and neural approaches to discovering and forecasting chaotic dynamics from short, sparse and noisy records, with the sampling interval as the primary experimental axis. Four conclusions stand out.
+
+\begin{enumerate}
+  \item \textbf{Integration-based sparse identification extends equation discovery to coarse sampling.} With multiple shooting, joint state estimation, continuation from a one-step flow-map regression and multistart, a sparse-library neural ODE recovers the Lorenz-63 equations from records with about four samples per oscillation and $1\%$ noise (median coefficient error $0.05$). At that sampling every derivative-based and weak-form estimator fails. At two-thirds of that interval it is eight times more accurate than weak SINDy.
+  \item \textbf{The optimisation devices are necessary, and their necessity is measurable.} Exact loss slices show single shooting turning into a flat surface with a needle-like minimum. Gradient norms grow exponentially with the horizon, at a rate of $0.68$ against $\lmax=0.91$. Short-window multiple shooting brings all random restarts to the same accurate solution, while single shooting over four time units brings none.
+  \item \textbf{Black-box neural ODEs are poor tools for discovery and do not extrapolate.} Their distilled equations are dense and inaccurate. Their forecasts fail immediately from initial conditions away from the attractor, although deep ensembles at least signal this with a tenfold increase in spread. Monte Carlo dropout does not.
+  \item \textbf{Identifiability is a property of the data.} For the four-species LV model, the library is so badly conditioned on the attractor that no estimator recovers the coefficients from noisy data. Trajectory matching still yields the most accurate forecasts there, by selecting a dynamically consistent model among nearly equivalent ones.
+\end{enumerate}
+
+For uncertainty, the bootstrap of the weak regression was the best calibrated (coverage $0.87$--$0.93$ against a nominal $0.90$). Window bagging of the sparse NODE gave the lowest CRPS but intervals that are far too narrow. A natural next step is to combine the two: integration-based estimates for accuracy, with recalibrated or Bayesian dispersion for honest intervals. Further steps are to replace the fixed monomial library by a learnable or misspecified one, and to design experiments that improve the conditioning of the library before the data are collected.
+
+\paragraph{Code and data.} All results are produced by six executed Jupyter notebooks (Python, NumPy, SciPy, PyTorch). Every number in this report is exported to CSV in \texttt{results/metrics}.

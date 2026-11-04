@@ -1,0 +1,80 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Learning and discovering chaotic dynamics from sparse, noisy observations
+% Built on the RGU report template (latex_template/RGU_Thesis_Template_2026).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass{template}
+\usepackage{graphicx,parskip,appendix,float}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage{url,amsmath,amssymb,amsthm,bm,mathtools,listings,pdfpages,caption,subcaption,multicol,datetime,rotating,booktabs,multirow,siunitx}
+\usepackage{csquotes}
+\usepackage{xcolor}
+\usepackage[style=authoryear,giveninits,backend=biber,maxcitenames=2,uniquelist=false]{biblatex}
+\addbibresource{references.bib}
+\usepackage[pagebackref=false,pdffitwindow=true]{hyperref}
+\usepackage{cleveref}
+
+\hypersetup{
+    pdftitle    = {Learning and Discovering Chaotic Dynamics from Sparse, Noisy Observations},
+    pdfauthor   = {Paul Christopher Aime},
+    pdfsubject  = {Data-driven identification of dynamical systems},
+    pdfkeywords = {system identification, SINDy, neural ODE, multiple shooting, chaos, uncertainty quantification},
+    colorlinks  = true, anchorcolor = blue, filecolor = blue, urlcolor = blue,
+    linkcolor   = blue, citecolor = blue,
+}
+
+\graphicspath{{../results/figures/}}
+\DeclareGraphicsExtensions{.pdf,.png}
+\sloppy
+
+\theoremstyle{plain}
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{lemma}[proposition]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[proposition]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[proposition]{Remark}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Th}{\Theta}
+\newcommand{\Xib}{\bm{\Xi}}
+\newcommand{\tc}{t_{\mathrm{char}}}
+\newcommand{\dto}{\Delta t_{\mathrm{obs}}}
+\newcommand{\lmax}{\lambda_{\max}}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\supp}{\operatorname{supp}}
+\newcommand{\vpt}{\mathrm{VPT}}
+
+\begin{document}
+
+\title{\LARGE Learning and Discovering Chaotic Dynamics\\ from Sparse, Noisy Observations}
+\author{Paul Christopher Aim\'e}
+\rpttype{Independent Research Project\\[4pt]{\normalfont\small\itshape Sparse regression, neural ODEs and the landscape of trajectory matching}}
+\degreetitle{Computer Engineering (G\'enie Informatique, GI5)}
+\institution{\'Ecole Nationale des Sciences Appliqu\'ees de Marrakech\\ Universit\'e Cadi Ayyad, Morocco}
+\submitdate{August 2026}
+
+\beforeabstract
+
+\prefacesection{Abstract}
+\input{sections/abstract}
+
+\afterabstract
+\afterpreface
+\pagenumbering{arabic}
+
+\input{sections/1_introduction}
+\input{sections/2_related}
+\input{sections/3_framework}
+\input{sections/4_methodology}
+\input{sections/5_experiments}
+\input{sections/6_conclusion}
+
+\appendix
+\input{sections/appendix}
+
+\footnotesize
+\printbibliography[heading=bibintoc,title={References}]
+\normalsize
+
+\end{document}

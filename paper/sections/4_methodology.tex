@@ -1,0 +1,99 @@
+\chapter{Methodology}\label{ch:method}
+
+\section{Systems and ground truth}\label{sec:systems}
+
+\Cref{tab:systems} lists the three systems. The four-species model of \textcite{vano2006chaos},
+\begin{equation}\label{eq:lv4}
+  \dot x_i = r_i x_i\Big(1-\sum_{j=1}^4 a_{ij}x_j\Big),\quad
+  r=\begin{pmatrix}1\\0.72\\1.53\\1.27\end{pmatrix},\quad
+  A=\begin{pmatrix}1&1.09&1.52&0\\0&1&0.44&1.36\\2.33&0&1&0.47\\1.21&0.51&0.35&1\end{pmatrix},
+\end{equation}
+leaves the positive orthant invariant and carries a strange attractor with $\lmax\approx0.020$. Every system is quadratic, so its vector field lies exactly in the span of the degree-2 library. Ground truth is computed with the eighth-order Dormand--Prince scheme \parencite{hairer1993solving} (\texttt{scipy.integrate.solve\_ivp}, method \texttt{DOP853}, $\mathrm{rtol}=10^{-10}$, $\mathrm{atol}=10^{-12}$) on a grid of step $\tc/750$.
+
+The characteristic period $\tc$ is the mean interval between successive maxima of the oscillating coordinate. For Lorenz-63 this is $z$, with $\tc=0.75$; for LV4 it is $x_1$, with $\tc\approx 34$, rounded to $35$. Re-estimating $\lmax$ by the method of \textcite{benettin1980lyapunov} with the RK4 step used for learned models gives $0.906$ and $0.019$. Hence $\lmax\tc=0.68$ and $0.67$, so the two chaotic systems have the same predictability horizon in units of their own period. This allows a single sampling grid expressed in $\tc$.
+
+\begin{table}[t]
+\centering
+\caption{Benchmark systems. $p$ is the library size, $|\supp\Xib|$ the number of active coefficients out of $pd$.}
+\label{tab:systems}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+system & $d$ & $p$ & $|\supp\Xib|$ & $\tc$ & $\lmax$ & regime \\
+\midrule
+Lorenz-63, $(\sigma,\rho,\beta)=(10,28,8/3)$ & 3 & 10 & 7/30 & 0.75 & 0.906 & chaotic \\
+competitive LV \eqref{eq:lv4} & 4 & 15 & 17/60 & 35 & 0.020 & chaotic \\
+predator--prey, $(\alpha,\beta,\delta,\gamma)=(\tfrac23,\tfrac43,1,1)$ & 2 & 6 & 4/12 & 8 & 0 & periodic \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Experimental design}\label{sec:design}
+
+\paragraph{Training records.} A record has a total length of $\tfrac{80}{3}\tc$ (20 time units, or 18 Lyapunov times, for Lorenz). It consists of $E=4$ independent experiments of $\tfrac{20}{3}\tc$ each. Each experiment starts from a random point of a long reference orbit, displaced by Gaussian noise of $0.5\,\sigma_i$ per coordinate and clipped to the positive orthant for LV. Several short experiments excite directions of the library that a single orbit on the attractor never visits (\cref{sec:exp-data}). The last $20\%$ of every experiment is held out for model selection, and no estimator sees the true coefficients.
+
+\paragraph{Corruption grid.} The records are sub-sampled at $\dto/\tc\in\{\tfrac1{75},\tfrac1{15},\tfrac2{15},\tfrac4{15}\}$, which is $\dto\in\{0.01,0.05,0.1,0.2\}$ for Lorenz, or 75, 15, 7.5 and 3.75 samples per period. Gaussian noise with $\varepsilon\in\{0,1,2,5,10,20\}\%$ is added. Every cell is repeated with 3 seeds, which change both the initial states of the experiments and the noise. The classical estimators run on the full grid, on an irregular-sampling condition and on the predator--prey control. The neural estimators run on a cross-shaped sub-grid: a sampling sweep at $\varepsilon=1\%$ and a noise sweep at $\dto=\tc/15$.
+
+\paragraph{Test sets.}
+\begin{itemize}
+  \item \emph{In-distribution (ID)}: 16 initial conditions on the attractor, taken from a reference orbit at least $5\tc$ apart.
+  \item \emph{Out-of-distribution (OOD)}: 16 initial conditions drawn uniformly in a box extended by $50\%$ of the attractor's span on each side, kept only if their distance to the attractor exceeds 2 in units of $\sigma_i$ (minimum distance 2.0 for Lorenz and 2.5 for LV4).
+\end{itemize}
+True forecasts cover 15 Lyapunov times. Long-run statistics are compared with a reference orbit of $200\tc$. Every learned model is integrated with the classical RK4 scheme and step $h=\tc/75$, so that differences between models reflect the vector field and not the integrator.
+
+\section{Classical estimators}
+
+\begin{itemize}
+  \item \textbf{C1} is dense least squares on central differences (\cref{eq:fd}).
+  \item \textbf{C2-FD} and \textbf{C2-SG} are STLSQ on central-difference and Savitzky--Golay derivatives (cubic, window $w\in\{5,7,9,13,17,25\}$).
+  \item \textbf{C3} is weak SINDy with test functions $(1-s^2)^4$ of half-width $H\in\{0.1,0.2,0.35,0.5,0.75\}\tc$, admissible only when $H\ge2\dto$, with centres spaced by half the number of samples in $H$.
+\end{itemize}
+STLSQ uses a ridge term of $10^{-10}$ for numerical stability. The threshold is searched on 24 values log-spaced in $[10^{-4},0.5]\times\max|\tilde\Xib_{\rm OLS}|$.
+
+\paragraph{Model selection.} Every candidate model is scored on the held-out blocks by short rollouts of length $\tc$, started from 24 noisy observations and compared with the noisy data that follow. The selected model is the sparsest one whose error is within $5\%$ (plus an absolute $10^{-4}$) of the best. The same rule selects the thresholds of the neural models. Because the comparison is made against noisy data, the noise floor is common to all candidates and does not bias the ranking.
+
+\section{Neural estimators}
+
+\paragraph{N1: black-box neural ODE.} The field is $f_\vartheta(x)=S\,g_\vartheta\big(S^{-1}(x-\mu)\big)/\tc$, with $g_\vartheta$ a $\tanh$ network with two hidden layers of 64 units. Its output layer is initialised small, so that early rollouts stay bounded. We minimise \eqref{eq:ms} with Adam \parencite{kingma2015adam} over minibatches of 128 windows and the shooting states, using gradient-norm clipping at 1 and a curriculum of window lengths $H\in\{0.1,0.25,0.5,1\}\tc$ (200, 250, 300 and 450 iterations). Learning rates start at $3\cdot10^{-3}$ for the network and $10^{-2}$ for the states, decay by $0.6$ per stage, and follow a cosine schedule in the last stage. Equations are extracted by \emph{symbolic distillation}: STLSQ of $f_\vartheta(S_i)$ on $\theta(S_i)$ over the denoised states, with the usual selection rule.
+
+\paragraph{N2: sparse-library neural ODE.} The field is $f_{\Xib}(x)=S\,\tilde\Xib^\top\theta(S^{-1}x)/\tc$ (\cref{lem:scaling}), fitted by differentiating through the RK4 integrator. \Cref{alg:n2} summarises the procedure. The Levenberg--Marquardt stage \parencite{marquardt1963} uses the exact Jacobian of the one-step residuals with respect to the $pd$ coefficients, obtained by forward-mode automatic differentiation. With Marquardt's diagonal scaling, its steps are invariant to the column scaling of $\Th$, which matters when the library is badly conditioned. The joint stages use full-batch L-BFGS \parencite{liu1989lbfgs} with a strong Wolfe line search over $(\tilde\Xib,S)$. A stage whose final objective is non-finite or higher than its initial value is discarded, and the curriculum stops there. The warm-started variant N2-WS adds the weak-SINDy estimate to the set of initialisations.
+
+\begin{algorithm}[t]
+\caption{Sparse-library neural ODE (N2)}\label{alg:n2}
+\DontPrintSemicolon
+\KwIn{experiments $\{(t^{(e)}_k,y^{(e)}_k)\}$, held-out blocks, initialisations $\mathcal I=\{0,\tilde\Xib_{\rm OLS}\}$ (N2-WS: $\cup\{\tilde\Xib_{\rm WSINDy}\}$)}
+\ForEach{$\tilde\Xib_0\in\mathcal I$}{
+  $S\leftarrow y$ \tcp*{raw observations; no smoothing}
+  $\tilde\Xib\leftarrow$ Levenberg--Marquardt on the flow-map problem \eqref{eq:flowmap}, $S$ fixed\;
+  \For{$K = 1,2,3,5,8,\dots,K_{\max}$ \tcp*{$K_{\max}\dto\approx\tc$}}{
+    $(\tilde\Xib,S)\leftarrow$ L-BFGS on $\mathcal J_K$ \eqref{eq:ms}, 60 iterations\;
+    \lIf{$\mathcal J_K$ non-finite or increased}{restore previous $(\tilde\Xib,S)$ and \textbf{break}}
+  }
+  score the run by the held-out rollout error\;
+}
+keep the best run; $\mathcal P\leftarrow\{\tilde\Xib\}$\;
+\For{$\lambda$ on 12 values log-spaced in $[10^{-3},10^{-0.4}]\max|\tilde\Xib|$}{
+  \Repeat{the support is unchanged (at most 4 sweeps)}{
+    zero all $|\tilde\xi_{kj}|<\lambda$; refit the survivors by L-BFGS on $\mathcal J_{K}$ with $S$ fixed\;
+  }
+  $\mathcal P\leftarrow\mathcal P\cup\{\tilde\Xib\}$ \tcp*{continuation: next $\lambda$ starts here}
+}
+\KwOut{the sparsest model in $\mathcal P$ within tolerance of the best held-out error}
+\end{algorithm}
+
+\section{Metrics}\label{sec:metrics}
+
+\paragraph{Equations.} Relative coefficient error and support $F_1$, as defined in \cref{ch:framework}. A support counts as \emph{exact} when it matches $\supp\Xib$ entry by entry.
+
+\paragraph{Short-term forecasts.} With the normalised error $e(t)=\big(\frac1d\sum_i(\hat x_i-x_i)^2/\sigma_i^2\big)^{1/2}$, the valid prediction time is $\vpt=\lmax\inf\{t:e(t)>0.4\}$, measured in Lyapunov times. We report its mean over the 16 ID and the 16 OOD initial conditions. For a model with the exact vector field, the RK4 discretisation alone limits the VPT to about 11 Lyapunov times on Lorenz.
+
+\paragraph{Long-term statistics.} From a free run of $200\tc$ after a burn-in of $20\tc$ we compute three quantities:
+\begin{itemize}
+  \item the mean, over coordinates, of the Wasserstein-1 distance $W_1$ between marginal invariant densities, in units of $\sigma_i$;
+  \item the relative error of the Benettin estimate of $\lmax$ (renormalisation every 10 steps, $d_0=10^{-8}$, $100\tc$);
+  \item the divergence rate, a run being divergent if its state becomes non-finite or exceeds $10^4$ in norm.
+\end{itemize}
+
+\section{Implementation}
+
+All code is in Python 3.13. It uses NumPy 2.5 and SciPy 1.18 for simulation and sparse regression, and PyTorch 2.14 in double precision for the neural models. It is organised as six executed notebooks plus a small \texttt{src/} package. The experiments ran on two CPU cores. A sparse-library fit takes 0.5 to 3 minutes, a black-box fit about 2 minutes, and a classical fit with model selection a few seconds. A GPU notebook reruns the full neural grid.

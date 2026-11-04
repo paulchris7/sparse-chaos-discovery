@@ -1,0 +1,14 @@
+We study how well data-driven methods recover the governing equations of chaotic systems, and forecast their trajectories, from short records that are sparsely sampled and corrupted by noise. The benchmarks are Lorenz-63 and a four-species competitive Lotka--Volterra model with a strange attractor, with a predator--prey model as a non-chaotic control. Measured in units of a characteristic period, the two chaotic systems have the same Lyapunov time, so a single grid of sampling intervals probes both at comparable resolution.
+
+On identical data and with an identical, held-out model-selection rule, we compare dense least squares, SINDy with finite-difference and Savitzky--Golay derivatives, weak-form SINDy, a black-box neural ODE and a sparse-library neural ODE. The last is fitted by differentiating through a Runge--Kutta integrator. Its training combines a Levenberg--Marquardt flow-map stage, quasi-Newton multiple shooting with joint state estimation and continuation in the window length, multistart, and sequential thresholding with trajectory-matching refits.
+
+Exact two-dimensional slices of the trajectory-matching loss show how single shooting degenerates into a flat surface with a needle-like minimum. Gradient norms grow exponentially with the horizon (rate $0.68$ against $\lambda_{\max}=0.91$). In random restarts, short-window multiple shooting brings every start to the same accurate solution, while single shooting over four time units brings none.
+
+With about four samples per oscillation and $1\%$ noise, the sparse neural ODE recovers the Lorenz equations with a median coefficient error of $0.05$, where all derivative-based and weak-form estimators fail. It also gives the longest in-distribution valid prediction times at every sampling interval at this noise level. Black-box neural ODEs yield dense distilled equations, and their forecasts fail immediately from initial conditions off the attractor. For the Lotka--Volterra model, the library matrix has a condition number of order $10^4$ on the data, and no estimator recovers the coefficients from noisy records.
+
+Among the uncertainty estimates, the bootstrap of the weak regression is the best calibrated (90\% interval coverage $0.87$--$0.93$). Bagging the sparse neural ODE gives the lowest CRPS but over-confident intervals. Deep ensembles flag distribution shift; Monte Carlo dropout does not.
+
+\vspace{1em}\noindent\textbf{Keywords:} system identification, sparse regression, SINDy, weak formulation, neural ODEs, multiple shooting, nonconvex optimisation, chaos, uncertainty quantification.
+
+
+\vspace{0.8em}\noindent{\small\emph{Preprint v1: neural models are evaluated on a sub-grid; the full GPU grid is planned for v2.}}

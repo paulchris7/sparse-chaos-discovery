@@ -1,0 +1,19 @@
+\chapter{Related Work}\label{ch:related}
+
+\paragraph{Sparse regression for equation discovery.}
+SINDy \parencite{brunton2016sindy} writes $f(x)=\Th(x)^\top\Xib$ for a library $\Th$ of candidate functions and estimates a sparse $\Xib$ by sequentially thresholded least squares (STLSQ). \textcite{zhang2019convergence} showed that STLSQ converges to a local minimiser of an $\ell_0$-penalised least-squares objective in finitely many steps. The method has been extended to partial differential equations \parencite{rudy2017pdefind} and to unknown coordinates \parencite{champion2019coordinates}. Model selection has been addressed with information criteria \parencite{mangan2017model}. A widely used implementation is PySINDy \parencite{kaptanoglu2022pysindy}. Noise robustness is the main weakness of the derivative-based formulation. Integral formulations \parencite{schaeffer2017integral} and weak formulations with compactly supported test functions \parencite{reinbold2020weak,messenger2021wsindy} remove the pointwise derivative and are, to our knowledge, the most noise-robust classical variants.
+
+\paragraph{Uncertainty in sparse identification.}
+Ensemble-SINDy \parencite{fasel2022esindy} bootstraps the regression and reports inclusion probabilities for every library term. Bayesian alternatives place sparsifying priors on $\Xib$ \parencite{hirsh2022priors}. Both quantify uncertainty in the coefficients. Neither, on its own, says how that uncertainty propagates through a chaotic flow.
+
+\paragraph{Integration-based identification and neural ODEs.}
+Neural ODEs \parencite{chen2018node,kidger2021thesis} parameterise $f$ by a neural network and fit it by differentiating through a numerical integrator. Universal differential equations \parencite{rackauckas2020ude} mix known physics with learned terms. RK4-SINDy \parencite{goyal2022rk4sindy} embeds a sparse library inside a Runge--Kutta step to avoid derivative estimation. \textcite{rudy2019denoising} estimate the noise and the dynamics jointly under time-stepping constraints, which is close in spirit to the latent shooting states used here.
+
+\paragraph{Multiple shooting and the smoothness of the loss.}
+Multiple shooting \parencite{bock1984multiple} splits a trajectory into windows with free initial states coupled by continuity conditions. It has long been used for parameter estimation in nonlinear and chaotic systems \parencite{voss2004identification,peifer2007multiple}. \textcite{ribeiro2020smoothness} analysed why simulation-error objectives become non-smooth for chaotic systems as the horizon grows. \textcite{turan2022multiple} showed that multiple shooting improves the training of neural differential equations on oscillatory data. Curriculum strategies that lengthen the horizon during training are related to curriculum learning \parencite{bengio2009curriculum}.
+
+\paragraph{Forecasting chaotic systems and benchmarks.}
+Data-driven forecasting of chaotic dynamics is commonly evaluated by the valid prediction time, measured in Lyapunov times \parencite{pathak2018reservoir,vlachas2020backprop}. \textcite{gilpin2021chaos} assembled a large benchmark of chaotic systems. Loss surfaces of neural networks are often visualised with filter-normalised random directions \parencite{li2018landscape}. Deep ensembles \parencite{lakshminarayanan2017ensembles} and Monte Carlo dropout \parencite{gal2016dropout} are standard baselines for predictive uncertainty, scored here with proper scoring rules \parencite{gneiting2007scoring}.
+
+\paragraph{Position of this work.}
+Most comparisons of discovery methods vary noise at a fixed, dense sampling rate, and evaluate either equations or forecasts but not both. Here the sampling interval is the primary axis. We measure equations, short-term forecasts, long-term statistics and calibrated uncertainty on the same models, and we connect the success or failure of integration-based fitting to the measured geometry of its loss surface.

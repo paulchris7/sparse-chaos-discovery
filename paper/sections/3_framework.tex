@@ -1,0 +1,113 @@
+\chapter{Mathematical Framework}\label{ch:framework}
+
+\section{Problem statement}
+
+Let $x:[0,T_e]\to\R^d$ solve \eqref{eq:ode} for $E$ experiments $e=1,\dots,E$ with initial states $x^{(e)}(0)$. We observe
+\begin{equation}\label{eq:obs}
+  y^{(e)}_k = x^{(e)}(t^{(e)}_k) + \eta^{(e)}_k,\qquad \eta^{(e)}_k \overset{\text{iid}}{\sim}\mathcal N\big(0,\varepsilon^2\Sigma_x\big),\qquad t^{(e)}_{k+1}-t^{(e)}_k=\dto,
+\end{equation}
+where $\Sigma_x=\operatorname{diag}(\sigma_1^2,\dots,\sigma_d^2)$ collects the variances of the coordinates on the attractor and $\varepsilon$ is the relative noise level.
+
+\paragraph{Library representation.} Let $\theta:\R^d\to\R^p$ be the vector of all monomials of total degree at most two, $p=\binom{d+2}{2}$, ordered as $1, x_1,\dots,x_d, x_1^2, x_1x_2,\dots,x_d^2$. All systems in this study satisfy
+\begin{equation}\label{eq:library}
+  f(x) = \Xib^\top\theta(x),\qquad \Xib\in\R^{p\times d},
+\end{equation}
+with a sparse coefficient matrix whose support $\supp(\Xib)=\{(k,j):\xi_{kj}\neq 0\}$ is known for scoring. Equation discovery is the estimation of $\Xib$. We score it by the relative error $\norm{\hat\Xib-\Xib}_F/\norm{\Xib}_F$ and by the precision, recall and $F_1$ score of $\supp(\hat\Xib)$.
+
+\paragraph{Nondimensionalisation.} Coefficients of different monomials carry different physical units, so a single sparsity threshold is meaningless in raw coordinates. We work with $z=S^{-1}x$, $S=\operatorname{diag}(s_1,\dots,s_d)$, where $s_i$ is the root mean square of the noisy data, and with $\tau=t/\tc$.
+
+\begin{lemma}[Support invariance]\label{lem:scaling}
+For a monomial with exponent vector $\pi_k\in\mathbb N^d$ put $c_k=\prod_i s_i^{\pi_{ki}}$ and $C=\operatorname{diag}(c_1,\dots,c_p)$. Then $z$ satisfies $dz/d\tau=\tilde\Xib^\top\theta(z)$ with
+\begin{equation}
+  \tilde\Xib = \tc\, C\,\Xib\,S^{-1},
+\end{equation}
+so $\supp(\tilde\Xib)=\supp(\Xib)$.
+\end{lemma}
+\begin{proof}
+$\theta_k(Sz)=c_k\theta_k(z)$ for every monomial, hence $\dot z = S^{-1}\Xib^\top C\theta(z)$, and the chain rule gives the factor $\tc$. Both $C$ and $S$ are diagonal with positive entries.
+\end{proof}
+Centring the data, $z=S^{-1}(x-\mu)$, would instead mix monomials of different degree and destroy the support, so we never centre.
+
+\paragraph{Identifiability.} On a finite record, the coefficients are determined only through the matrix $\Th(Z)\in\R^{N\times p}$ whose rows are $\theta(z_k)^\top$. If $\sigma_{\min}$ denotes its smallest singular value divided by $\sqrt N$, any estimator that is linear in an estimate $\hat{\dot Z}$ of the derivatives satisfies, to first order,
+\begin{equation}\label{eq:ident}
+  \norm{\delta\tilde\Xib}_F \lesssim \frac{1}{\sigma_{\min}}\Big(\frac{1}{N}\norm{\delta\dot Z}_F^2\Big)^{1/2}.
+\end{equation}
+A trajectory confined to a thin attractor makes some monomials nearly collinear, so $\sigma_{\min}$ can be tiny. This is a property of the data, not of the estimator, and \cref{sec:exp-data} shows that it governs the four-species LV model.
+
+\section{Estimators built on derivative surrogates}
+
+STLSQ \parencite{brunton2016sindy} approximately solves
+\begin{equation}\label{eq:l0}
+  \min_{\tilde\Xib}\ \norm{\hat{\dot Z}-\Th(Z)\tilde\Xib}_F^2 + \lambda^2\norm{\tilde\Xib}_0
+\end{equation}
+by alternating a least-squares solve on the current support with the removal of all coefficients with $|\tilde\xi_{kj}|<\lambda$. It terminates in finitely many sweeps, because the support can only shrink \parencite{zhang2019convergence}.
+
+\paragraph{Finite differences.} For the central difference $D_k=(y_{k+1}-y_{k-1})/(2\dto)$,
+\begin{equation}\label{eq:fd}
+  D_k = \dot x(t_k) + \frac{\dto^2}{6}\,x^{(3)}(t_k) + O(\dto^4) + \frac{\eta_{k+1}-\eta_{k-1}}{2\dto}.
+\end{equation}
+The noise term has covariance $\varepsilon^2\Sigma_x/(2\dto^2)$, which explodes at dense sampling. The truncation term is controlled by the dominant angular frequency $\omega=2\pi/\tc$: for a component oscillating like $e^{i\omega t}$, the relative bias is $(\omega\dto)^2/6$. On our grid $\dto/\tc\in\{\tfrac{1}{75},\tfrac{1}{15},\tfrac{2}{15},\tfrac{4}{15}\}$, so this bias is $0.12\%$, $2.9\%$, $11.7\%$ and $47\%$ of the derivative. A $47\%$ systematic error in the regression targets cannot be removed by any sparsity pattern, which explains why all derivative-based estimators fail at the coarsest sampling.
+
+\paragraph{Savitzky--Golay derivatives.} A local polynomial fit of degree three over $w$ samples \parencite{savitzky1964} reduces the noise gain by a factor of about $w^{3/2}$. In exchange it adds a bias that grows with the window length $w\dto$ relative to $\tc$. The window is a hyper-parameter, and we select it on held-out data.
+
+\section{Weak formulation}
+
+Let $\phi\in C^{q}(\R)$ be supported on $[t_c-H,t_c+H]$. Multiplying \eqref{eq:ode} by $\phi$ and integrating by parts removes the derivative from the data:
+\begin{equation}\label{eq:weak}
+  -\int \dot\phi(t)\,x(t)\,dt = \Big(\int\phi(t)\,\theta\big(x(t)\big)\,dt\Big)^{\!\top}\Xib .
+\end{equation}
+With $K$ test functions $\phi_k$ and the trapezoidal rule on the samples, this yields a linear system $G\Xib=B$ with $G_{kj}\approx\int\phi_k\theta_j(y)$ and $B_{ki}\approx-\int\dot\phi_k y_i$, which we solve by STLSQ \parencite{messenger2021wsindy}. We use $\phi(t)=\big(1-((t-t_c)/H)^2\big)^{4}$, whose first three derivatives vanish at the endpoints of its support.
+
+\begin{proposition}[Quadrature order]\label{prop:quad}
+Let $g=\phi\,\theta_j(x)$ be smooth on the support of $\phi$, and let $g^{(m)}$ vanish at both endpoints for $m\le q$. Then the trapezoidal rule with step $\dto$ has error $O\big(\dto^{2\lfloor q/2\rfloor+2}\big)$. For $q=3$ this is $O(\dto^6)$, against $O(\dto^2)$ for the central difference \eqref{eq:fd}.
+\end{proposition}
+\begin{proof}
+By the Euler--Maclaurin formula, the error is $\sum_{j\ge1}\frac{B_{2j}}{(2j)!}\dto^{2j}\big[g^{(2j-1)}\big]_{t_c-H}^{t_c+H}$ plus a remainder of the same order as the first omitted term. Every bracket with $2j-1\le q$ vanishes.
+\end{proof}
+
+Measurement noise enters \eqref{eq:weak} through averages $\int\dot\phi\,\eta$. Their variance is $O(\varepsilon^2\dto/H)$ rather than $O(\varepsilon^2/\dto^2)$, so the weak form is both higher order and noise-averaging. Its limitation is that \cref{prop:quad} is asymptotic: when $\dto$ is a sizeable fraction of $\tc$, the integrand is not resolved and the quadrature error is $O(1)$.
+
+\section{Trajectory matching and the geometry of its loss}\label{sec:tm}
+
+Integration-based methods avoid derivative surrogates altogether. Let $\Phi^t_\vartheta(x_0)$ denote the flow of a parametric field $f_\vartheta$. This is either the library model $f_{\Xib}(x)=\Xib^\top\theta(x)$ or a neural network $f_\vartheta=g_\vartheta$. Single shooting minimises
+\begin{equation}\label{eq:ss}
+  \mathcal L_T(\vartheta) = \frac{1}{n}\sum_{k=1}^{n}\norm{\Phi^{t_k}_\vartheta(x_0)-y_k}^2_{\Sigma_x^{-1}},\qquad t_n=T .
+\end{equation}
+
+\paragraph{Sensitivities grow exponentially.} The parameter sensitivity $U(t)=\partial\Phi^t_\vartheta(x_0)/\partial\vartheta$ obeys the variational equation
+\begin{equation}\label{eq:sens}
+  \dot U = J_\vartheta\big(x(t)\big)\,U + \partial_\vartheta f_\vartheta\big(x(t)\big),\qquad U(0)=0,
+\end{equation}
+with $J_\vartheta=\partial_x f_\vartheta$. By variation of constants, $U(t)=\int_0^t M(t,s)\,\partial_\vartheta f\,ds$, where $M$ is the state-transition matrix of the linearised flow. On a chaotic attractor, the multiplicative ergodic theorem gives $\norm{M(t,s)}\approx e^{\lmax(t-s)}$ for typical orbits, hence $\norm{U(t)}\sim e^{\lmax t}/\lmax$.
+
+\begin{proposition}[Curvature and basin width of single shooting]\label{prop:basin}
+Near the true parameter $\vartheta^\star$ and in the noise-free case, the Gauss--Newton Hessian of \eqref{eq:ss} is $\mathcal H_T=\frac{2}{n}\sum_k U(t_k)^\top\Sigma_x^{-1}U(t_k)$. Its largest eigenvalue grows like $e^{2\lmax T}$, and so does $\norm{\nabla\mathcal L_T}$ divided by the parameter error. The quadratic model of $\mathcal L_T$ is accurate only while the linearisation $\Phi^t_{\vartheta}\approx\Phi^t_{\vartheta^\star}+U\delta\vartheta$ holds over the whole horizon, that is, for $\norm{\delta\vartheta}\lesssim \delta_{\rm nl}\,e^{-\lmax T}$, where $\delta_{\rm nl}$ is the scale at which the flow stops being linear. The region in which descent methods behave as on a convex problem therefore shrinks exponentially with $T$.
+\end{proposition}
+The statement is a heuristic consequence of \eqref{eq:sens}, not a theorem with constants. \Cref{sec:exp-landscape} checks it numerically: the median gradient norm grows at a rate close to $\lmax$, and the exact loss surfaces become rough on scales that shrink with $T$.
+
+\paragraph{Multiple shooting.} Let $S=\{S_i\}$ be free \emph{shooting states}, one per observation time. Multiple shooting with windows of $K$ observation intervals minimises
+\begin{equation}\label{eq:ms}
+  \mathcal J_K(\vartheta,S) = \frac{1}{|\mathcal W|K}\sum_{i\in\mathcal W}\sum_{k=1}^{K}\norm{\Phi^{t_{i+k}-t_i}_\vartheta(S_i)-y_{i+k}}^2_{\Sigma_x^{-1}} + \frac{w}{N}\sum_{i}\norm{S_i-y_i}^2_{\Sigma_x^{-1}},
+\end{equation}
+where $\mathcal W$ indexes the windows that do not straddle two experiments. A window starting at $S_i$ and ending beyond $t_{i+1}$ must reproduce the data that later states are tied to, so continuity holds in the limit, while the data term penalises states that drift from the observations. This form, with all windows active and one state per sample, makes $S$ a denoised estimate of the trajectory, in the spirit of \textcite{rudy2019denoising}. Because every residual involves at most $K\dto$ of integration, the sensitivities in \eqref{eq:ms} are bounded by $e^{\lmax K\dto}$ independently of the record length. The record length only adds residuals, that is, information. Single shooting is the special case of one window with $S_0$ fixed.
+
+\paragraph{Continuation in the window length.} The case $K=1$ with $S$ fixed at the data is a one-step flow-map regression,
+\begin{equation}\label{eq:flowmap}
+  \min_{\Xib}\ \sum_i\norm{\Phi^{\dto}_{\Xib}(y_i)-y_{i+1}}^2_{\Sigma_x^{-1}} .
+\end{equation}
+For small $\dto$, $\Phi^{\dto}_{\Xib}(y)=y+\dto\,\Xib^\top\theta(y)+O(\dto^2)$ is nearly linear in $\Xib$, so \eqref{eq:flowmap} is a mildly nonlinear least-squares problem with a wide basin. Our sparse-library estimator solves \eqref{eq:flowmap} first. It then increases $K$ geometrically ($K=1,2,3,5,8,\dots$), and every stage starts inside the basin found at the previous one. This is a homotopy from a nearly convex problem to the full one, consistent with \cref{prop:basin}.
+
+\section{Uncertainty models}\label{sec:uq-theory}
+
+We compare four constructions of a predictive distribution. Each yields $M$ vector fields $\{f^{(m)}\}$, and forecasts are obtained by integrating each of them from the same initial condition.
+\begin{itemize}
+  \item \textbf{Bootstrap of the weak regression (E-SINDy).} Rows of $(G,B)$ are resampled with replacement and STLSQ is rerun with the selected threshold \parencite{fasel2022esindy}. Inclusion probabilities $\hat P(\xi_{kj}\neq0)$ summarise uncertainty about the support.
+  \item \textbf{Window bagging (N2).} The set $\mathcal W$ in \eqref{eq:ms} is resampled with replacement for each member of the sparse-library model.
+  \item \textbf{Deep ensembles (N1).} Independent initialisations and minibatch streams of the black-box model \parencite{lakshminarayanan2017ensembles}.
+  \item \textbf{Monte Carlo dropout (N1).} With dropout masks $\zeta\sim\mathrm{Bernoulli}(1-p)$ on hidden units \parencite{gal2016dropout}. We draw the mask \emph{once per trajectory} and hold it fixed along the rollout, so each sample $f_{\vartheta,\zeta}$ is an autonomous vector field. Resampling the mask at every Runge--Kutta stage would turn the model into a random dynamical system, whose dispersion reflects injected noise rather than epistemic uncertainty.
+\end{itemize}
+The predictive distributions are scored by the empirical coverage of central $90\%$ intervals and by the continuous ranked probability score. For a sample $\{X^{(m)}\}$ and outcome $y$ the latter is
+\begin{equation}\label{eq:crps}
+  \mathrm{CRPS} = \frac{1}{M}\sum_m|X^{(m)}-y| - \frac{1}{2M^2}\sum_{m,m'}|X^{(m)}-X^{(m')}| ,
+\end{equation}
+a strictly proper score \parencite{gneiting2007scoring}. Both are computed per coordinate, in units of $\sigma_i$, as functions of lead time. We also report the rank correlation between the ensemble spread and the error of the ensemble mean (spread--skill).
